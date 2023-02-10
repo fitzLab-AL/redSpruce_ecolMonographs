@@ -1,4 +1,5 @@
 # STILL WORK IN PROGRESS
+# Not yet 100% clean
 
 
 # Scripts to model genomic turnover, calculate and standardize genomic offsets and calculate Donor and Recipient Importance
@@ -223,10 +224,58 @@ allOffset_sigma_df<-as.data.frame(allOffset_sigma_list)
 ## Apply sigma threshold ---------------------------------------------------
 # Set "not to exceed" offset threshold (here: 1 sigma) and calculate transferability matrix
 
+sigmaTH<-1
+
+
+# Prep. for loop
+allOffset_sigmaTH<- as.data.frame(matrix(NA,ncol=ncol(allOffset_sigma_df),nrow=nrow(allOffset_sigma_df))) 
+names(allOffset_sigmaTH)<-names(allOffset_sigma_df)
+
+breakIt_sigma <- split(1:nrow(allOffset_sigma), cut(1:nrow(allOffset_sigma), nBreak, labels = FALSE))
+
+# Run in parallel
+cl <- makeCluster(nCores)
+registerDoParallel(cl)
+
+allOffset_sigmaTH_loop <- foreach(i = 1:length(breakIt_sigma)) %dopar%{
+  allOffset_sigmaTH_sub<-allOffset_sigma[breakIt_sigma[[i]],]
+  for  (j in 1:ncol(allOffset_sigmaTH_sub)){
+    allOffset_sigmaTH_sub[,j]<-ifelse(allOffset_sigmaTH_sub[,j]<=sigmaTH,1,0)
+  }
+  return(allOffset_sigmaTH_sub)
+}
+stopCluster(cl)
+
+# Call and format data
+allOffset_sigmaTH_list<- do.call(rbind, allOffset_sigmaTH_loop)
+allOffset_sigmaTH_df<-as.data.frame(allOffset_sigmaTH_list)
+row.names(allOffset_sigmaTH_df)<-row.names(allOffset_sigma_df)
+
+
+
 
 ## Calculate donor importance ----------------------------------------------
+# Here: recipient area = entire study area
+# For smaller recipient areas subset allOffset_sigmaTH_df accordingly (based on cell indices)
+
+# Make donor importance dataframe
+# Cell indices and xy coordinates are required for mapping
+donImp_xy<-data.frame(clim_sprucePres_xy[,c("x","y","cellindex")])
+
+# Calculate donor importance
+donImp_xy$donImp<-colSums(allOffset_sigmaTH_df,na.rm = T) 
+donImp_xy$percDonImp<-donImp_xy$donImp/nrow(allOffset_sigmaTH_df)*100 # as percentage
+
 
 
 ## Calculate recipient importance ------------------------------------------
+# Here: recipient area = entire study area
+# For smaller recipient areas subset allOffset_sigmaTH_df accordingly (based on cell indices)
 
+# Make recipient importance dataframe
+# Cell indices and xy coordinates are required for mapping
+recImp_xy<-data.frame(futClim_studyArea_xy[,c("x","y","cellindex")]) 
 
+# Calculate recipient importance
+recImp_xy$recImp<-rowSums(allOffset_sigmaTH_df,na.rm = T)
+recImp_xy$percRecImp<-recImp_xy$recImp/ncol(allOffset_sigmaTH_df)*100 # as percentage
