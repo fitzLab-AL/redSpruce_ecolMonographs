@@ -1,3 +1,6 @@
+# STILL WORK IN PROGRESS
+
+
 # Scripts to model genomic turnover, calculate and standardize genomic offsets and calculate Donor and Recipient Importance
 # described in Lachmuth et al. (resubmitted) Ecological Monographs
 
@@ -9,10 +12,12 @@
 
 # Settings ----------------------------------------------------------------
 nCores<-50
+nBreak<-100
 
 
 
 # Load required R packages ------------------------------------------------
+library(adehabitatLT)
 library(extendedForest) 
 library(fields)
 library(gradientForest)
@@ -47,8 +52,6 @@ gfMod <- gradientForest(cbind(climGF, snpScores), predictor.vars=colnames(climGF
 # CONTEMPORARY SPATIAL OFFSETS --------------------------------------------
 # Read climate data for all geographic grid cells (2.5 arcmin) with red spruce presence records
 
-# TO-DO: provide just selected climate data!!!
-
 clim_sprucePres_xy<-fread(paste0(datapath,"forGitHub_MS1/clim_sprucePres.csv"), stringsAsFactors = T, header = T)
 # just climate data:
 clim_sprucePres<-clim_sprucePres_xy[,-(1:3)]
@@ -73,8 +76,8 @@ spatOffset <- foreach(i = 1:length(breakIt), .packages=c("fields")) %dopar%{
 }
 stopCluster(cl)
 
-spatOffsetGF<- do.call(rbind, spatOffset)
-spatOffset_df<-as.data.frame(spatOffsetGF)
+spatOffset_list<- do.call(rbind, spatOffset)
+spatOffset_df<-as.data.frame(spatOffset_list)
 colnames(spatOffset_df)<-rownames(transClim)
 spatOffset_df[1:10,1:10]
 
@@ -90,16 +93,128 @@ ecdfSpatOffset<-ecdf(spatOffset_lon$value)
 
 
 # SPATIO-TEMPORAL OFFSETS -------------------------------------------------
+# Spatio-temporal offsets describe the G - E disruption for a (donor) population being 
+# transferred from one grid cell in current climate to any other grid cell (recipient) in future climate
+# Here we use all grid cells with extant spruce populations as donors and all grid cells in eco-regions
+# with extant spruce populations as well as adjacent eco-regions as recipients
+
+
+# Read current climate:
+clim_sprucePres_xy<-fread(paste0(datapath,"forGitHub_MS1/clim_sprucePres.csv"), stringsAsFactors = T, header = T)
+# just climate data:
+clim_sprucePres<-clim_sprucePres_xy[,-(1:3)]
+
+
+# Read future climate:
+futClim_studyArea_xy<-fread(paste0(datapath,"/forGitHub_MS1/futClim_studyArea.csv"), stringsAsFactors = T, header = T)
+head(futClim_studyArea_xy)
+# just climate data:
+futClim_studyArea<-futClim_studyArea_xy[,-(1:3)]
+
+
+## GF transform climate data
+# Current transformed climate
+currClim_trans_xy <- data.frame(clim_sprucePres_xy[,c("x","y","cellindex")], predict(gfMod,clim_sprucePres))
+currClim_trans_xy <- currClim_trans_xy[order(currClim_trans_xy$cellindex),]
+
+# Future transformed climate
+futClim_trans_xy <- data.frame(futClim_studyArea_xy[,c("x","y","cellindex")], predict(gfMod,futClim_studyArea))
+futClim_trans_xy <- futClim_trans_xy[order(futClim_trans_xy$cellindex),]
+
+
+# Remove xy coordinates and cell index
+currClim_trans<-currClim_trans_xy[,-(1:3)]
+futClim_trans <-futClim_trans_xy[,-(1:3)]
+
+
+### Calculate raw offsets between all donor (current) and recipient (future) cells ------------------
+breakItAll <- split(1:nrow(futClim_trans), cut(1:nrow(futClim_trans), nBreak, labels = FALSE))
+
+# Run in parallel:
+cl <- makeCluster(nCores)
+registerDoParallel(cl)
+
+allOffset <- foreach(i = 1:length(breakItAll), .packages=c("fields")) %dopar%{
+  
+  # Calculate pairwise offset matrix
+  mat_allOffset<-rdist(futClim_trans[breakItAll[[i]],],currClim_trans)
+  return(mat_allOffset)
+  
+}
+stopCluster(cl)
+
+# Call and format data
+allOffset_list<- do.call(rbind, allOffset)
+allOffset_df<-as.data.frame(allOffset_list)
+# Name columns and rows according to cell indices (important for mapping later on (not part of this script))
+colnames(allOffset_df)<-futClim_trans_xy$cellindex 
+rownames(allOffset_df)<-futClim_trans_xy$cellindex 
+
+
+
+# clear memory
+rm(spatOffset)
+rm(spatOffset_list)
+rm(allOffset)
+rm(allOffset_list)
 
 
 
 # STANDARDIZE SPATIO-TEMPORAL OFFSETS -------------------------------------
 
+## Re-express raw offsets as probability based on spatial offset ecdf  -------------
 
-## Re-express raw offsets as quantiles of spatial offset ecdf  -------------
+# Prep. for loop
+allOffset_prob<-allOffset_df
+rm(allOffset_df)
+
+breakIt_prob<- split(1:nrow(allOffset_prob), cut(1:nrow(allOffset_prob), nBreak, labels = FALSE))
+
+# Run in parallel
+cl <- makeCluster(nCores)
+registerDoParallel(cl)
+
+allOffset_prob_loop <- foreach(i = 1:length(breakIt_prob), .packages=c("stats")) %dopar%{
+  allOffset_prob_sub<-allOffset_prob[breakIt_prob[[i]],]
+  for(j in 1:ncol(allOffset_prob_sub)) {
+    allOffset_prob_sub[ , j] <- ecdfSpatOffset(allOffset_prob_sub[ , j]) 
+  } 
+  return(allOffset_prob_sub)
+}
+stopCluster(cl)
+
+# Call and format data
+allOffset_prob_list<-do.call(rbind, allOffset_prob_loop)
+allOffset_prob_df<-as.data.frame(allOffset_prob_list)
+
+rm(allOffset_prob)
+rm(allOffset_prob_list)
 
 
 ## Re-express raw offsets as quantiles (sigmas) of chi distribution with 1 degree of freedom (half-normal distribution)  -------------
+# Prep. for loop
+allOffset_sigma<-allOffset_prob_df
+rm(allOffset_prob_df)
+
+breakIt_sigma <- split(1:nrow(allOffset_sigma), cut(1:nrow(allOffset_sigma), nBreak, labels = FALSE))
+
+# Run in parallel
+cl <- makeCluster(nCores)
+registerDoParallel(cl)
+
+allOffset_sigma_loop <- foreach(i = 1:length(breakIt_qchi), .packages=c("adehabitatLT")) %dopar%{
+  allOffset_sigma_sub<-allOffset_sigma[breakIt_qchi[[i]],]
+  for(j in 1:ncol(allOffset_sigma_sub)) {       
+    allOffset_sigma_sub[ , j] <- adehabitatLT::qchi(allOffset_sigma_sub[ , j],1) 
+  } 
+  return(allOffset_sigma_sub)
+}
+stopCluster(cl)
+
+
+# Call and format data
+allOffset_sigma_list<-do.call(rbind, allOffset_sigma_loop)
+allOffset_sigma_df<-as.data.frame(allOffset_sigma_list)
 
 
 
