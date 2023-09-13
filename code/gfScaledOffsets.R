@@ -1,11 +1,7 @@
-# STILL WORK IN PROGRESS
-# Not yet 100% clean
+# Scripts to model genomic variation, calculate and scale genomic offsets and calculate Donor and Recipient Importance
+# described in Lachmuth et al. (2023) Ecological Monographs
 
-
-# Scripts to model genomic turnover, calculate and standardize genomic offsets and calculate Donor and Recipient Importance
-# described in Lachmuth et al. (resubmitted) Ecological Monographs
-
-# written by S Lachmuth at the Appalachian Lab, Frostburg, MD, USA 2020-2023
+# written by S. Lachmuth at the Appalachian Lab, Frostburg, MD, USA 2020-2023
 #
 # Code is provided as is, without support 
 
@@ -45,8 +41,6 @@ gfMod <- gradientForest(cbind(climGF, snpScores), predictor.vars=colnames(climGF
                            response.vars=colnames(snpScores), ntree=5000, 
                            maxLevel=maxLevel, trace=T, corr.threshold=0.5)
 
-# New error message: .Error in rbind(structure(c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  : 
-#                              number of columns of matrices must match (see arg 51)
 
 
 
@@ -58,7 +52,7 @@ clim_sprucePres_xy<-fread(paste0(datapath,"forGitHub_MS1/clim_sprucePres.csv"), 
 clim_sprucePres<-clim_sprucePres_xy[,-(1:3)]
 
 
-# transform climate data with gradient forest model
+# transform climate data using gradient forest model predictions
 transClim<-predict(gfMod,clim_sprucePres)
 
 
@@ -80,7 +74,6 @@ stopCluster(cl)
 spatOffset_list<- do.call(rbind, spatOffset)
 spatOffset_df<-as.data.frame(spatOffset_list)
 colnames(spatOffset_df)<-rownames(transClim)
-spatOffset_df[1:10,1:10]
 
 
 # melt into long format
@@ -95,9 +88,9 @@ ecdfSpatOffset<-ecdf(spatOffset_lon$value)
 
 # SPATIO-TEMPORAL OFFSETS -------------------------------------------------
 # Spatio-temporal offsets describe the G - E disruption for a (donor) population being 
-# transferred from one grid cell in current climate to any other grid cell (recipient) in future climate
-# Here we use all grid cells with extant spruce populations as donors and all grid cells in eco-regions
-# with extant spruce populations as well as adjacent eco-regions as recipients
+# transferred from one grid cell under current climate to any other grid cell (recipient) under future climate.
+# Here, we use all grid cells with extant spruce populations as donors and all grid cells in eco-regions
+# with extant spruce populations as well as adjacent eco-regions as recipients.
 
 
 # Read current climate:
@@ -114,11 +107,11 @@ futClim_studyArea<-futClim_studyArea_xy[,-(1:3)]
 
 
 ## GF transform climate data
-# Current transformed climate
+# Current transformed climate (coordinates required for mapping - not part of this script)
 currClim_trans_xy <- data.frame(clim_sprucePres_xy[,c("x","y","cellindex")], predict(gfMod,clim_sprucePres))
 currClim_trans_xy <- currClim_trans_xy[order(currClim_trans_xy$cellindex),]
 
-# Future transformed climate
+# Future transformed climate (coordinates required for mapping - not part of this script)
 futClim_trans_xy <- data.frame(futClim_studyArea_xy[,c("x","y","cellindex")], predict(gfMod,futClim_studyArea))
 futClim_trans_xy <- futClim_trans_xy[order(futClim_trans_xy$cellindex),]
 
@@ -161,7 +154,7 @@ rm(allOffset_list)
 
 
 
-# STANDARDIZE SPATIO-TEMPORAL OFFSETS -------------------------------------
+# SCALE SPATIO-TEMPORAL OFFSETS -------------------------------------
 
 ## Re-express raw offsets as probability based on spatial offset ecdf  -------------
 
@@ -223,7 +216,6 @@ allOffset_sigma_df<-as.data.frame(allOffset_sigma_list)
 
 ## Apply sigma threshold ---------------------------------------------------
 # Set "not to exceed" offset threshold (here: 1 sigma) and calculate transferability matrix
-
 sigmaTH<-1
 
 
@@ -254,12 +246,12 @@ row.names(allOffset_sigmaTH_df)<-row.names(allOffset_sigma_df)
 
 
 
-## Calculate donor importance ----------------------------------------------
+## Calculate Donor Importance ----------------------------------------------
 # Here: recipient area = entire study area
-# For smaller recipient areas subset allOffset_sigmaTH_df accordingly (based on cell indices)
+# For smaller donor or recipient areas subset allOffset_sigmaTH_df accordingly (based on cell indices)
 
-# Make donor importance dataframe
-# Cell indices and xy coordinates are required for mapping
+# Make Donor Importance dataframe
+# Cell indices and xy coordinates are required for mapping (not part of this script)
 donImp_xy<-data.frame(clim_sprucePres_xy[,c("x","y","cellindex")])
 
 # Calculate donor importance
@@ -268,14 +260,14 @@ donImp_xy$percDonImp<-donImp_xy$donImp/nrow(allOffset_sigmaTH_df)*100 # as perce
 
 
 
-## Calculate recipient importance ------------------------------------------
+## Calculate Recipient Importance ------------------------------------------
 # Here: recipient area = entire study area
-# For smaller recipient areas subset allOffset_sigmaTH_df accordingly (based on cell indices)
+# For smaller donor or recipient areas subset allOffset_sigmaTH_df accordingly (based on cell indices)
 
-# Make recipient importance dataframe
+# Make Recipient Importance dataframe
 # Cell indices and xy coordinates are required for mapping
 recImp_xy<-data.frame(futClim_studyArea_xy[,c("x","y","cellindex")]) 
 
-# Calculate recipient importance
+# Calculate Recipient Importance
 recImp_xy$recImp<-rowSums(allOffset_sigmaTH_df,na.rm = T)
 recImp_xy$percRecImp<-recImp_xy$recImp/ncol(allOffset_sigmaTH_df)*100 # as percentage
