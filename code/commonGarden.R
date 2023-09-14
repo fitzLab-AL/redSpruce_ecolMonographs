@@ -14,7 +14,7 @@ gardDat<-read.csv(file = "commonGarden.csv")
 
 # Population and garden level models ------------------------------------------
 summary(gardDat)
-predictor<-c("rawClimDist","rawClimDist_sigma","Offset","Offset_sigma")
+predictor<-c("rawClimDist","rawClimDist_sigma","Offset","Offset_sigma") # raw and scaled climate transfer distances and genomic offsets
 garden<-c("MD","NC","VT")
 
 
@@ -46,6 +46,7 @@ for(i in 1:length(predictor)){
         LM<-lm(Growth~Offset_sigma, data=gardDat[gardDat$Garden==garden[j],])
       }
       
+      # Get stats
       intercept_pop<-summary(LM)$coefficients[1,1]
       slope_pop<-summary(LM)$coefficients[2,1]
       R2_pop<-summary(LM)$r.squared
@@ -57,13 +58,15 @@ for(i in 1:length(predictor)){
       p_pop<-dropterm(LM,test="F")$'Pr(F)'[2]
       
       
-      # Save models
-      arr_models[[predictor[i], garden[j]]]<-LM
+     
       
-      # Save stats
+      # Store stats
       results_garden<-rbind(pop_results_garden,data.frame(Predictor=predictor[i],Garden=garden[j],
                                                               intercept_pop=intercept_pop,slope_pop=slope_pop,R2_pop=R2_pop,R2adj_pop=R2adj_pop,
                                                               F_pop=F_pop, numdf_pop=numdf_pop, dendf_pop=dendf_pop,p_pop=p_pop, AIC_pop=AIC_pop))
+      
+      # Store models
+      arr_models[[predictor[i], garden[j]]]<-LM
       
     }
   }
