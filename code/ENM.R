@@ -1,4 +1,4 @@
-# Script for ensemble Environmental Niche Modeling for red spruce Picea rubens Sarg. in Eastern North America
+# Script for ensemble Environmental Niche Modeling (ENM) for red spruce Picea rubens Sarg. in Eastern North America
 # described in:
 # Lachmuth et al. (2023). Novel genomic offset metrics integrate local adaptation into habitat suitability 
 # forecasts and inform assisted migration. Ecological Monographs
@@ -26,7 +26,7 @@ spatBlockFolds<-dget(paste0(datapath,"spatBlockFolds_2.5.Robj"))
 
 
 
-# Fit and split-validate HSM --------------------------------------------
+# Fit and split-validate ENM --------------------------------------------
 
 # Variables for storing results
 nCV <- 5 # Number of cross-validations
