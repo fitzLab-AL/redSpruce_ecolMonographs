@@ -13,6 +13,8 @@ For the availibilty of raw data see "Open Research Statement" in the manuscript.
 - **clim_sprucePops.csv:** *Climate data of our sampled red spruce populations. See "Methods" section of the manuscript and Appendices S1 and S2 for details on the data sources.*
 - **clim_sprucePres.csv:** *Climate data for extant red spruce populations. See "Methods" section of the manuscript and Appendices S1 for details on the data sources.*
 - **futClim_studyArea.csv:** *End of 21st century climate data (under SSP5-85) for our study area. See "Methods" section of the manuscript for details on the original data source.*
+- **snpScores_sprucePops.csv:** *Spatial blocking folds for split-validation in Environmental Niche Modeling.*
+- **spatBlockFolds_2.5.Robj:** *SNP data at candidate loci for our sampled populations (see "Methods" section of the Manuscripts for details on the selection of candidate loci).*
 
 
 ***
