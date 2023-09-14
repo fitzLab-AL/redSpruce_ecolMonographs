@@ -10,9 +10,9 @@ For the availibilty of raw data see "Open Research Statement" in the manuscript.
 
 - **commonGarden.csv:** *Red spruce height growth population means from three common gardens as well as (raw and scaled) genomic offsets and climate transfer distances*
 - **clim_occurence_redSpruce.csv:** *Red spruce presence-absence and climate data used for Environmental Niche Modeling*
-- **clim_sprucePops.csv:** *Climate data of our sampled red spruce populations. See "Methods" section of the manuscript and Appendices S1 and S2 for details on the data sources*
-- **clim_sprucePres.csv:** *Climate data for extant red spruce populations. See "Methods" section of the manuscript and Appendices S1 for details on the data sources*
-- **futClim_studyArea.csv:** *End of 21st century climate data (under SSP5-85) for our study area. See "Methods" section of the manuscript for details on the original data source*
+- **clim_sprucePops.csv:** *Climate data of our sampled red spruce populations. See "Methods" section of the manuscript and Appendices S1 and S2 for details on the data sources.*
+- **clim_sprucePres.csv:** *Climate data for extant red spruce populations. See "Methods" section of the manuscript and Appendices S1 for details on the data sources.*
+- **futClim_studyArea.csv:** *End of 21st century climate data (under SSP5-85) for our study area. See "Methods" section of the manuscript for details on the original data source.*
 
 
 ***
