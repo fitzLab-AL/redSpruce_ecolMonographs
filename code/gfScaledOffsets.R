@@ -1,6 +1,7 @@
-# Scripts to model genomic variation, calculate and scale genomic offsets and calculate Donor and Recipient Importance
-# described in Lachmuth et al. (2023) Ecological Monographs
-
+# Script to model genomic variation, calculate and scale genomic offsets and calculate Donor and Recipient Importance
+# described in:
+# Lachmuth et al. (2023). Novel genomic offset metrics integrate local adaptation into habitat suitability 
+# forecasts and inform assisted migration. Ecological Monographs
 # written by S. Lachmuth at the Appalachian Lab, Frostburg, MD, USA 2020-2023
 #
 # Code is provided as is, without support 
@@ -26,11 +27,11 @@ library(doParallel)
 # GRADIENT FOREST MODELING -----------------------------------------------------
 
 # Read climatic data for sampled red spruce populations
-climGF<-read.csv(file = paste0(datapath,"/forGitHub_MS1/clim_sprucePops.csv"))
+climGF<-read.csv(file = "clim_sprucePops.csv")
 
 
 # Read allele frequencies of 240 candidate SNPs for sampled red spruce populations
-snpScores<-read.csv(file = paste0(datapath,"/forGitHub_MS1/snpScores_sprucePops.csv")) # pops are in same order as in climate data file
+snpScores<-read.csv(file = "snpScores_sprucePops.csv") # pops are in same order as in climate data file
 
 
 # Model of allele frequency turnover along climatic gradients
@@ -47,7 +48,7 @@ gfMod <- gradientForest(cbind(climGF, snpScores), predictor.vars=colnames(climGF
 # CONTEMPORARY SPATIAL OFFSETS --------------------------------------------
 # Read climate data for all geographic grid cells (2.5 arcmin) with red spruce presence records
 
-clim_sprucePres_xy<-fread(paste0(datapath,"forGitHub_MS1/clim_sprucePres.csv"), stringsAsFactors = T, header = T)
+clim_sprucePres_xy<-fread("clim_sprucePres.csv", stringsAsFactors = T, header = T)
 # just climate data:
 clim_sprucePres<-clim_sprucePres_xy[,-(1:3)]
 
@@ -94,13 +95,13 @@ ecdfSpatOffset<-ecdf(spatOffset_lon$value)
 
 
 # Read current climate:
-clim_sprucePres_xy<-fread(paste0(datapath,"forGitHub_MS1/clim_sprucePres.csv"), stringsAsFactors = T, header = T)
+clim_sprucePres_xy<-fread("clim_sprucePres.csv", stringsAsFactors = T, header = T)
 # just climate data:
 clim_sprucePres<-clim_sprucePres_xy[,-(1:3)]
 
 
 # Read future climate:
-futClim_studyArea_xy<-fread(paste0(datapath,"/forGitHub_MS1/futClim_studyArea.csv"), stringsAsFactors = T, header = T)
+futClim_studyArea_xy<-fread("futClim_studyArea.csv", stringsAsFactors = T, header = T)
 head(futClim_studyArea_xy)
 # just climate data:
 futClim_studyArea<-futClim_studyArea_xy[,-(1:3)]
